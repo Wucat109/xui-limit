@@ -3,9 +3,22 @@
 一个适用于 Debian 的 x-ui / 3x-ui 节点限速管理脚本。  
 用于对 **x-ui 面板中的独立端口节点** 进行单独限速，支持交互式操作、开机自动恢复、规则查看、修改、删除与修复。
 
+
+
 > 适合场景：  
 > 一台 Debian 服务器，安装了 x-ui / 3x-ui 面板，希望对其中某一个或多个节点按端口单独限速，而不是对整台服务器或全部节点统一限速。
 
+---
+
+安装命令
+```
+curl -L -o xui-limit.sh https://raw.githubusercontent.com/Wucat109/xui-limit/main/xui-limit.sh && chmod +x xui-limit.sh && bash xui-limit.sh
+```
+或者
+```
+wget -O xui-limit.sh https://raw.githubusercontent.com/Wucat109/xui-limit/main/xui-limit.sh && chmod +x xui-limit.sh && bash xui-limit.sh
+
+```
 ---
 
 ## 功能特点
