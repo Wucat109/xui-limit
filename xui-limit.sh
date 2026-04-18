@@ -1,9 +1,9 @@
 #!/bin/bash
 
-CONFIG_DIR="/etc/xui-node-limit"
+CONFIG_DIR="/etc/xui-limit"
 RULES_FILE="$CONFIG_DIR/rules.conf"
-RESTORE_SCRIPT="/usr/local/bin/xui-node-limit-restore.sh"
-SERVICE_FILE="/etc/systemd/system/xui-node-limit.service"
+RESTORE_SCRIPT="/usr/local/bin/xui-limit-restore.sh"
+SERVICE_FILE="/etc/systemd/system/xui-limit.service"
 
 mkdir -p "$CONFIG_DIR"
 touch "$RULES_FILE"
@@ -45,9 +45,19 @@ show_table() {
 
 install_deps() {
     msg "正在安装依赖..."
-    apt update
-    apt install -y iproute2 iptables sqlite3 bsdextrautils
-    msg "依赖安装完成"
+
+    if command -v apt >/dev/null 2>&1; then
+        apt update
+        apt install -y iproute2 iptables sqlite3 util-linux bsdextrautils
+    else
+        warn "暂不支持当前包管理器，请手动安装：iproute2 iptables sqlite3"
+    fi
+
+    if command -v column >/dev/null 2>&1; then
+        msg "依赖安装完成"
+    else
+        info "column 未安装成功，但不影响脚本核心功能，仅影响表格对齐显示"
+    fi
 }
 
 get_default_interface() {
@@ -758,7 +768,7 @@ create_restore_script() {
     cat > "$RESTORE_SCRIPT" <<'EOF'
 #!/bin/bash
 
-RULES_FILE="/etc/xui-node-limit/rules.conf"
+RULES_FILE="/etc/xui-limit/rules.conf"
 [ -f "$RULES_FILE" ] || exit 0
 
 ensure_qdisc() {
@@ -791,7 +801,7 @@ EOF
 create_service() {
     cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Restore x-ui node limit rules
+Description=Restore xui-limit rules
 After=network-online.target
 Wants=network-online.target
 
@@ -809,13 +819,13 @@ enable_autostart() {
     create_restore_script
     create_service
     systemctl daemon-reload
-    systemctl enable xui-node-limit.service >/dev/null 2>&1 || true
-    systemctl restart xui-node-limit.service
+    systemctl enable xui-limit.service >/dev/null 2>&1 || true
+    systemctl restart xui-limit.service
     msg "已启用开机自动恢复当前限速规则"
 }
 
 disable_autostart() {
-    systemctl disable xui-node-limit.service >/dev/null 2>&1 || true
+    systemctl disable xui-limit.service >/dev/null 2>&1 || true
     rm -f "$SERVICE_FILE"
     systemctl daemon-reload
     msg "已关闭开机自动恢复当前限速规则"
@@ -833,8 +843,13 @@ environment_check() {
 
     command -v iptables >/dev/null 2>&1 && msg "[OK] iptables 可用" || err "[FAIL] iptables 不可用"
     command -v tc >/dev/null 2>&1 && msg "[OK] tc 可用" || err "[FAIL] tc 不可用"
-    command -v sqlite3 >/dev/null 2>&1 && msg "[OK] sqlite3 可用" || warn "[WARN] sqlite3 不可用"
-    command -v column >/dev/null 2>&1 && msg "[OK] column 可用" || warn "[WARN] column 不可用"
+    command -v sqlite3 >/dev/null 2>&1 && msg "[OK] sqlite3 可用" || warn "[WARN] sqlite3 不可用（无法读取 x-ui 节点信息）"
+
+    if command -v column >/dev/null 2>&1; then
+        msg "[OK] column 可用"
+    else
+        info "[INFO] column 不可用（仅影响表格对齐显示）"
+    fi
 
     if detect_xui_db; then
         msg "[OK] 已检测到 x-ui.db：$XUI_DB_PATH"
@@ -842,7 +857,7 @@ environment_check() {
         warn "[WARN] 未检测到 x-ui.db"
     fi
 
-    if systemctl is-enabled xui-node-limit.service >/dev/null 2>&1; then
+    if systemctl is-enabled xui-limit.service >/dev/null 2>&1; then
         msg "[OK] 开机自动恢复当前限速规则：已启用"
     else
         warn "[WARN] 开机自动恢复当前限速规则：未启用"
