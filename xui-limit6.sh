@@ -193,15 +193,15 @@ iptables6_rule_exists() {
 iptables_rule_exists() { iptables4_rule_exists "$@"; }
 
 add_iptables_rule() {
-    local PROTO="$1" PORT="$2" HANDLE="$3" ok=1
+    local PROTO="$1" PORT="$2" HANDLE="$3" ok=0
 
     if ! iptables4_rule_exists "$PROTO" "$PORT" "$HANDLE"; then
-        iptables -t mangle -A OUTPUT -p "$PROTO" --sport "$PORT" -j MARK --set-mark "$HANDLE" || ok=0
+        iptables -t mangle -A OUTPUT -p "$PROTO" --sport "$PORT" -j MARK --set-mark "$HANDLE" || ok=1
     fi
 
     if command -v ip6tables >/dev/null 2>&1; then
         if ! iptables6_rule_exists "$PROTO" "$PORT" "$HANDLE"; then
-            ip6tables -t mangle -A OUTPUT -p "$PROTO" --sport "$PORT" -j MARK --set-mark "$HANDLE" || ok=0
+            ip6tables -t mangle -A OUTPUT -p "$PROTO" --sport "$PORT" -j MARK --set-mark "$HANDLE" || ok=1
         fi
     else
         warn "未检测到 ip6tables：IPv6 的 ${PROTO}/${PORT} 限速标记未添加"
